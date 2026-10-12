@@ -4,7 +4,7 @@
 
 ## 一句话
 
-Code = Agda 的 **concrete 语法**（parser 吐出来的那棵树）原样搬进 Agda：一个构造子都不少，名字是字符串，糖和 unsafe 都在。环境 Γ = 已检查模块的接口 × 当前 flag（语境 × 余语境）；`Code Γ` 由 Γ 递归算出（只能 import Γ 里有的、flag 只降不升），这是归纳–递归；`check` 的回应带回新接口，下一拍才进 Γ，这是 ▷。余模型 = `agda` 这个 Haskell 程序自己的入口，不走反射 API。
+Code = Agda 的 **concrete 语法**（parser 吐出来的那棵树）原样搬进 Agda：一个构造子都不少，名字是字符串，糖和 unsafe 都在。环境 E = 签名 Σ（已检查模块的接口：语境）× 当前 flag（余语境）；`Code E` 由 E 递归算出（只能 import E 里有的、flag 只降不升），这是归纳–递归；`check` 的回应带回新接口，下一拍才进 E，这是 ▷。余模型 = `agda` 这个 Haskell 程序自己的入口，不走反射 API。
 
 ## ① 载体：从 Agda 源码生成
 
@@ -21,20 +21,22 @@ De Bruijn 不出现在 Code 里：那是检查器内部（Internal Term）的事
 ## ② 环境：语境 × 余语境，归纳–递归在这
 
 ```
- Env     ε                  父给的库：一组接口 + 一组 flag
-         Γ ▸ (m , i , h)    m : Code Γ 过了检查；i 它的接口（后端算的）；h 指纹
- Code Γ  = Σ[ m ∈ Module ] (imports m ⊆ visible Γ) × (flags m ≼ flags Γ)      对 Γ 递归，可判定
- visible Γ = ε 的模块 + 链上每个 m 的名字；flags Γ = 链上最严的那组
+ Env     E₀                 父给的库：一组接口 + 一组 flag
+         E ▸ (m , i , h)    m : Code E 过了检查；i 它的接口（后端算的）；h 指纹
+ Code E  = 模块 m，满足 imports m ⊆ visible E 且 flags m ≼ flags E            对 E 递归，可判定
+ visible E = E₀ 的模块 + 链上每个 m 的名字；flags E = 链上最严的那组
  Iface   = 导出名 + 类型（Expr，仍是 Code）+ 种类 + fixity
 ```
 
 Env 用 Code 造，Code 由 Env 算。它管模块这一级（能 import 谁、能开什么 flag），正好是父实例控制子实例的那一级；声明内部的名字由 Agda 的 scope checker 查，不在类型里重做。
 
+符号：环境写 E，签名（名字与类型的表）写 Σ，**不用 Γ**。Γ 是语境，语境只增不减（直觉主义 / Kripke 的默认）；环境还有余语境（flag、模式），会缩、会分叉合拢（decisions 2），不是语境的 displayed category——DSH 把世界全做成语境范畴上的 displayed category，正是它的局限。
+
 ## ③ import / flag 是模态算子，Agda 已经有这套规则
 
 | 算子 | 作用在 | 只降不升 = Agda 的哪条规则 |
 | --- | --- | --- |
-| `open import M using / hiding / renaming` | 语境 Γ | 只能 import visible Γ 里的；using ⊆ 导出名。= Store 的 realm R |
+| `open import M using / hiding / renaming` | 语境（Σ 的名字） | 只能 import visible E 里的；using ⊆ 导出名。= Store 的 realm R |
 | `--safe`、`--without-K` 这类 coinfective | 余语境 | 父有子必有：子关不掉 |
 | `--cubical`、`--guardedness`、`--sized-types`、`--rewriting` 这类 infective | 余语境 | 父没有子不能开，否则父 import 不了子（InfectiveImport） |
 
@@ -44,19 +46,17 @@ Env 用 Code 造，Code 由 Env 算。它管模块这一级（能 import 谁、�
 
 ```
  AgdaSig  quote : String → Op      回应 Maybe Code                 ← Agda.Syntax.Parser（LLM 的文本从这进）
-          check : Code Γ → Op      回应 ok Iface Hash ∣ fail 报错    ← createInterface：nicify、scope、type check、
+          check : Code E → Op      回应 ok Iface Hash ∣ fail 报错    ← createInterface：nicify、scope、type check、
                                                                       接口哈希、登记进已访问模块表（后面的 import 找得到）
           eval  : Expr → Op        回应 Expr（规范形仍是 Code）      ← inferExpr + normalise + reify + abstractToConcrete
           goals / give / refine / caseSplit                        ← InteractionTop（Emacs 模式背后那套，编辑器用）
- next Γ (check m) (ok i h) = Γ ▸ (m , i , h)；fail 环境不动
- W Γ = Γ 处的 TCState 快照：Haskell 里是持久值，开几个子 = 从同一快照分叉
+ next E (check m) (ok i h) = E ▸ (m , i , h)；fail 环境不动
+ W E = E 处的 TCState 快照：Haskell 里是持久值，开几个子 = 从同一快照分叉
 ```
 
 flag 不由驱动器解释，createInterface 自己按 OPTIONS pragma 生效：unsafe 代码能进 Code、能被检查，但 `--safe` 的父 import 不进来。失败回滚（putTC）、每拍补做块末检查、错误类警告当错误：照 v5。
 
-两种接法（区别见 §⑦）：
-- A：decode 成 `C.Module`，在进程内从 createInterface 的 parse 之后那一步接进去。
-- B：decode 后用 Agda 自己的 pretty 打成文本，走 agda 的标准文件管线（parse 起）。
+接法定为 A（§⑦）：decode 成 `C.Module`，在进程内从 createInterface 的 parse 之后那一步接进去。
 
 ## ⑤ 受限的 Code（定）
 
@@ -83,8 +83,8 @@ flag 不由驱动器解释，createInterface 自己按 OPTIONS pragma 生效：u
 | `.agdai`、接口哈希、交互点 | 要自己补 | Agda 的文件管线免费给：iFullHash 就是指纹，`?` 有位置 |
 | 回环测试 | 另外跑 | 每次 check 都在跑（pretty 不忠实立刻暴露） |
 
-从 Agda 世界看两者一样：都是 `check : Code Γ → Op`。B 用临时文件是余模型内部的事，不是 shell。
-建议：**B 先做**（少写自定义代码、报错有位置、验收即实现），pretty 不够忠实或嫌慢时再换 A。
+从 Agda 世界看两者一样：都是 `check : Code E → Op`。
+**定：A。** 程序是带着这个后端跑的（代码 + 后端 = 完整的程序），不迎合别的 Agda 后端版本；后端以后大概率要重写，接得深不是负担。B 的好处另外补：报错位置在 decode 时按树的路径生成，回环测试单独跑。
 
 ## 决定（2026-10-13）
 
@@ -92,4 +92,6 @@ flag 不由驱动器解释，createInterface 自己按 OPTIONS pragma 生效：u
 2. import / flag 是模态算子，必须在 Code 里；只降不升由 Agda 的 infective / coinfective 规则复核。（定）
 3. 一个范畴 = 一个 module，公理在参数里。（定）
 4. v5（核心子集 + 反射 API）归档。（定）
-5. 接法 A / B：待定，建议 B 先做。
+5. 接法 A。（定）
+6. 符号：环境 E、签名 Σ，不用 Γ 表示世界或环境（见 §②）。（定）
+7. 后端原则：类型擦除的路线是错的——它把类型纯粹当限制，碰到 cubical（transp / hcomp 要看类型）和反射（代码要看类型）就表达不了。后端是带着类型跑的解释器；以后重写后端也守这一条。（定）
