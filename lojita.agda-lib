@@ -1,0 +1,4 @@
+name: lojita
+include: src
+depend: cubical
+flags: --guardedness
