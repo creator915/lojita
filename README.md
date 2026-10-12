@@ -32,7 +32,14 @@
 | `docs/category-frame.md` | 骨架一页结论（2026-10-11） |
 | `docs/store-and-slots.md` | 数据库、Scheduler、Rebuilder：结构、槽、决定、留白（2026-10-12） |
 | `src/Later.agda` | 延迟模态 ▷：拍签名 `TSig`、带环境索引的程序 `Run`、路 `Walk`（程序与棋谱共用）、余模型、`play`（2026-10-13） |
+| `src/Syntax.agda` | **生成的**：Agda 的具体语法（parser 吐出来的那棵树），74 个类型 264 个构造子，由后端的 `agda-code-gen gen` 从 Agda 源码生成；范围去掉、名字是字符串、糖和 unsafe 都在 |
+| `src/FlagTable.agda` | **生成的**：哪些 flag 是 infective / coinfective（`agda-code-gen flags`） |
+| `src/Env.agda` | 环境 `Env`（父给的库与模式 ▸ 过了检查的模块）、头 `Header E`、`Code E`（归纳–递归，只管模块边界）、栈 `Ix`、签名 `AgdaSig`（parse / check / eval / render / enter / leave / ask / readF / writeF / log）、运行时造头造 Code 的判定（2026-10-13） |
+| `src/ToyEnv.agda` | 脚本余模型跑一局：check 两个模块、开一个窄的子实例、问一次、回来，全 `refl` |
+| `src/DriveToy.agda` | 真后端跑的七个程序（`./drive.sh`）：parse → check → eval、驳回带路径、子实例、接口、头里没写的 import、M2 import 虚拟模块 M1、`--safe` 兜底 |
+| `tests/neg/` | 五个必须编译失败的反例（`./neg.sh`）：看不见的 import、多开 flag、关 `--safe`、根上 leave、配额超支 |
 | `docs/code-plan.md` | Code 类型的方案（2026-10-13）：完整的 concrete 语法从 Agda 源码生成、环境 = 语境 × 余语境、import / flag 是模态算子、余模型 = agda 程序的入口；接法 A / B |
+| `docs/code-design.md` | 设计稿与实施记录（2026-10-13）：生成器、Env / Code E、AgdaSig、后端接在 agda 的哪几个入口、子实例、待拍板与已定 |
 | `archive/2026-10-13-code-v5/` | 归档：Code 的核心子集版（名字按层号、接反射 API）与它的玩具、文档、驱动脚本；后端 v5 在 `/root/lojita-discarded/backend-v5` |
 
 ## 检查
@@ -40,7 +47,9 @@
 需要 Agda（≥ 2.6.3）和 cubical 库（在 `~/.agda/libraries` 里登记，库名 `cubical`）。
 
 ```
-./check.sh        # = agda src/ToyStore.agda && agda src/Later.agda，顺带检查其余模块
+./check.sh        # = agda src/ToyStore.agda && agda src/ToyEnv.agda，顺带检查其余模块
+./neg.sh          # 五个反例必须编译失败
+./drive.sh        # 真后端（agda-cubical-run.v6）跑 DriveToy 的七个程序
 ```
 
 `LC_ALL=C.UTF-8` 不能省：错误信息里有 Σ、≡，非 UTF-8 环境下 Agda 会把错误本身吞掉。
@@ -49,9 +58,9 @@
 
 ## 现在在哪
 
-骨架、数据库、Rebuilder、Scheduler 的槽都在；延迟模态 ▷（`src/Later.agda`：拍签名、带环境索引的程序、路、余模型）已到位。
+骨架、数据库、Rebuilder、Scheduler 的槽都在；延迟模态 ▷（`src/Later.agda`）已到位。
 
-代码的类型 Code 做过一版（`archive/2026-10-13-code-v5/`），因为只覆盖 Agda 的核心子集、接在反射 API 上，已归档。
-定下来的方案在 `docs/code-plan.md`：Code = Agda 完整的 concrete 语法（从 Agda 源码生成，糖和 unsafe 都在）；
-环境 = 已检查模块的接口 × flag（语境 × 余语境），`Code Γ` 由 Γ 递归算出（归纳–递归），`check` 的回应带回新接口、下一拍进环境（▷）；
-余模型 = agda 程序自己的入口（parser / createInterface / normalise / 交互命令），不是反射 API。
+代码的类型 v6 已经跑通（2026-10-13）：`Syntax.agda` 从 Agda 源码生成；`Env.agda` 的 `Code E` 由环境算出（归纳–递归），
+`check` 过了下一拍才看得见新模块（▷）；余模型是 `agda` 进程自己（后端 v6 的 `--cubical-drive`，接在 parser / createInterface / normalise 上）。
+`./drive.sh` 里 LLM 写的文本被 parse、check、eval，驳回时带着树上的路径回来；子实例只看得见父给的模块、只开父开了的 flag、只有父给的配额，违反的写不出来（`./neg.sh`）。
+接口、编辑器步（goals / give / case）、注释、声明级依赖是下一阶段。
