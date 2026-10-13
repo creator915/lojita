@@ -271,3 +271,12 @@ fillHole = WithHole.run srcHole step error
 -- split 在洞 0 按 n 分情况，再列洞：两个
 splitN : Run AgdaSig G ix₀                        -- holes (两个 goal)
 splitN = WithHole.run srcHole (λ h m → move (split h m 0 "n") λ { (rejected s) → done (noCheck s) ; (edited m′) → move (goals h m′) λ g → done g }) noCheck
+
+------------------------------------------------------------------------
+-- §9 扩展 λ 里的洞也能分情况：新子句接回 λ { … } 的分支表
+------------------------------------------------------------------------
+srcLam : String
+srcLam = "{-# OPTIONS --safe --cubical #-}\nmodule M5 where\nopen import Cubical.Data.Nat\n\ng : ℕ → ℕ\ng = λ { n → ? }\n"
+
+splitLam : Run AgdaSig G ix₀                      -- holes (两个)
+splitLam = WithHole.run srcLam (λ h m → move (split h m 0 "n") λ { (rejected s) → done (noCheck s) ; (edited m′) → move (goals h m′) λ g → done g }) noCheck

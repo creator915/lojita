@@ -195,4 +195,6 @@ mutual
 - `Generalized` 是 parser 会产出的（类型签名的类型外面套一层），保留；`DontCare` 排除。
 - 回环测试的"忠实"定义：parse → toV → fromV → toV 恒等，外加 parser 用到的构造子都在 Syntax 里；pretty → parse 不作为判据（Agda 的打印器不保证可重解析），规范文本只用来算指纹。
 - 编辑器的树上替换先放在后端（give / split 直接回 `edited 新树`），Agda 侧下一拍 check 它；设计稿里说"替换在 Agda 里做"，等 Syntax 有了可判定相等再搬过去核对。
-- 还没做：Syntax 的可判定相等（录音回放）；`render` 不打注释。
+- Rebuilder 就是 Agda 自己的接口缓存：check 过的模块把接口（带源码哈希与 import 哈希）写进 `_build`，再 check 哈希没变就直接装，不重查；`./rebuild.sh` 演示。按用户的意思，录音回放也只对哈希，不生成 Syntax 的可判定相等。
+- 编辑器的两个缝补上了：section 回成 λ（和 scope checker 一样），λ { … } 里的洞分情况后接回分支表（原版靠 Emacs 的字符串手术）。
+- 还没做：`render` 不打注释。

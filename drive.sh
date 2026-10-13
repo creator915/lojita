@@ -15,3 +15,4 @@ run comments    # 4                                     注释挂成声明序列
 run showGoals   # holes ((goal 0 … ℕ) ∷ [])            洞的表
 run fillHole    # value (Lit (LitNat (pos 6)))         give 填洞 → check → eval
 run splitN      # holes (两个)                          split 分情况
+run splitLam    # holes (两个)                          扩展 λ 里的洞分情况

@@ -36,7 +36,7 @@
 | `src/FlagTable.agda` | **生成的**：哪些 flag 是 infective / coinfective（`agda-code-gen flags`） |
 | `src/Env.agda` | 环境 `Env`（父给的库与模式 ▸ 过了检查的模块）、头 `Header E`、`Code E`（归纳–递归，只管模块边界）、栈 `Ix`、签名 `AgdaSig`（parse / check / eval / render / enter / leave / ask / readF / writeF / log / goals / give / split）、接口的导出表（名字、类型、依赖、哈希）、运行时造头造 Code 的判定（2026-10-13） |
 | `src/ToyEnv.agda` | 脚本余模型跑一局：check 两个模块、开一个窄的子实例、问一次、回来，全 `refl` |
-| `src/DriveToy.agda` | 真后端跑的十一个程序（`./drive.sh`）：parse → check → eval、驳回带路径、子实例、接口、头里没写的 import、M2 import 虚拟模块 M1、`--safe` 兜底、注释节点、洞的表、填洞、分情况 |
+| `src/DriveToy.agda` | 真后端跑的十二个程序（`./drive.sh`）：parse → check → eval、驳回带路径、子实例、接口、头里没写的 import、M2 import 虚拟模块 M1、`--safe` 兜底、注释节点、洞的表、填洞、分情况、λ { … } 里分情况 |
 | `tests/neg/` | 五个必须编译失败的反例（`./neg.sh`）：看不见的 import、多开 flag、关 `--safe`、根上 leave、配额超支 |
 | `docs/code-plan.md` | Code 类型的方案（2026-10-13）：完整的 concrete 语法从 Agda 源码生成、环境 = 语境 × 余语境、import / flag 是模态算子、余模型 = agda 程序的入口；接法 A / B |
 | `docs/code-design.md` | 设计稿与实施记录（2026-10-13）：生成器、Env / Code E、AgdaSig、后端接在 agda 的哪几个入口、子实例、待拍板与已定 |
@@ -49,7 +49,9 @@
 ```
 ./check.sh        # = agda src/ToyStore.agda && agda src/ToyEnv.agda，顺带检查其余模块
 ./neg.sh          # 五个反例必须编译失败
-./drive.sh        # 真后端（agda-cubical-run.v6）跑 DriveToy 的七个程序
+./drive.sh        # 真后端（agda-cubical-run.v6）跑 DriveToy 的十二个程序
+./recheck.sh      # 十个真实文件走 parse → 树 → 检查
+./rebuild.sh      # Rebuilder：第二次 check 同一个模块，哈希没变就直接装接口
 ```
 
 `LC_ALL=C.UTF-8` 不能省：错误信息里有 Σ、≡，非 UTF-8 环境下 Agda 会把错误本身吞掉。
@@ -63,5 +65,6 @@
 代码的类型 v6 已经跑通（2026-10-13）：`Syntax.agda` 从 Agda 源码生成；`Env.agda` 的 `Code E` 由环境算出（归纳–递归），
 `check` 过了下一拍才看得见新模块（▷）；余模型是 `agda` 进程自己（后端 v6 的 `--cubical-drive`，接在 parser / createInterface / normalise 上）。
 `./drive.sh` 里 LLM 写的文本被 parse、check、eval，驳回时带着树上的路径回来；子实例只看得见父给的模块、只开父开了的 flag、只有父给的配额，违反的写不出来（`./neg.sh`）。
-编辑器的三步（goals 列洞、give 填洞、split 分情况）、注释节点、接口里的声明级依赖与哈希也在；`ask` 用 DeepSeek Flash 真跑过。
-下一步：Syntax 的可判定相等（录音回放）、把树上替换搬到 Agda 侧核对、编辑器与数据库本体。
+编辑器的三步（goals 列洞、give 填洞、split 分情况，含 λ { … } 里的洞）、注释节点、接口里的声明级依赖与哈希也在；`ask` 用 DeepSeek Flash 真跑过。
+Rebuilder 用 Agda 自己的接口缓存：check 过的模块哈希没变就不重查（`./rebuild.sh`）。
+下一步：编辑器与数据库本体（结构 / 实现投影、改了代码重查依赖它的测试）。
