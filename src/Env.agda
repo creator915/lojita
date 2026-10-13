@@ -109,12 +109,21 @@ child ≼ parent = allᵇ (λ f → not (isInf f) or (f ∈ₛ parent)) child
 ------------------------------------------------------------------------
 -- §2 接口、环境、头、Code E：归纳–递归
 ------------------------------------------------------------------------
--- 后端算出来、作为数据带回的接口：名字、导出名及其类型（类型仍是 Code 的 Expr）、用的 flag、指纹
+-- 后端算出来、作为数据带回的接口：名字、导出表、用的 flag、模块指纹
+-- 导出表的一行 = 数据库的一条：名字、类型（仍是语法）、定义里用到的名字（依赖）、这条声明的指纹
+record Export : Type where
+  constructor export
+  field
+    name : String
+    type : Expr
+    deps : List String
+    hash : ℕ
+
 record Iface : Type where
   constructor iface
   field
     name    : ModName
-    exports : List (String × Expr)
+    exports : List Export
     options : Flags
     hash    : ℕ
 
@@ -187,6 +196,22 @@ data Answer : Type where        -- eval 的回应
   value : Expr → Answer                -- 规范形（仍是语法）
   error : String → Answer
 
+-- 编辑器那一组步的回应：洞 = Agda 自己的 ?
+record Goal : Type where
+  constructor goal
+  field
+    id   : ℕ                           -- Agda 的洞号（按出现顺序）
+    path : List ℕ                      -- 洞在树上的路径
+    type : Expr                        -- 目标类型（语法）
+
+data Goals : Type where
+  holes   : List Goal → Goals
+  noCheck : String → Goals             -- 模块本身没过检查
+
+data Edit : Type where
+  edited   : Module → Edit             -- 改过的树（洞填上了 / 子句拆开了），下一拍 check 它
+  rejected : String → Edit
+
 data Op : Ix → Type where
   parse  : {ix : Ix} → String → Op ix                             -- 文本 → 树（parser）
   check  : {ix : Ix} → Code (envOf ix) → Op ix                    -- 检查一个模块（createInterface）
@@ -198,6 +223,10 @@ data Op : Ix → Type where
   readF  : {ix : Ix} → String → Op ix
   writeF : {ix : Ix} → String → String → Op ix
   log    : {ix : Ix} → String → Op ix
+  -- 编辑器：都在头的视野里检查一遍带洞的模块，不改环境
+  goals  : {ix : Ix} → Header (envOf ix) → Module → Op ix                   -- 洞的表
+  give   : {ix : Ix} → Header (envOf ix) → Module → ℕ → Expr → Op ix        -- 往第 k 个洞里填
+  split  : {ix : Ix} → Header (envOf ix) → Module → ℕ → String → Op ix      -- 在第 k 个洞按变量分情况
 
 Res : {ix : Ix} → Op ix → Type
 Res (parse _)    = Maybe Module
@@ -210,6 +239,9 @@ Res (ask _)      = String
 Res (readF _)    = Maybe String
 Res (writeF _ _) = Bool
 Res (log _)      = Unit
+Res (goals _ _)     = Goals
+Res (give _ _ _ _)  = Edit
+Res (split _ _ _ _) = Edit
 
 next : {ix : Ix} (o : Op ix) → Res o → Ix
 next {(E , q) , rest}   (check c)    (ok i)     = (E ▸ (c , i) , q) , rest    -- ▷：下一拍才看得见
@@ -224,6 +256,9 @@ next {ix}               (render _)   _          = ix
 next {ix}               (readF _)    _          = ix
 next {ix}               (writeF _ _) _          = ix
 next {ix}               (log _)      _          = ix
+next {ix}               (goals _ _)     _       = ix
+next {ix}               (give _ _ _ _)  _       = ix
+next {ix}               (split _ _ _ _) _       = ix
 
 AgdaSig : TSig Ix
 AgdaSig = record { Op = Op ; Res = Res ; next = next }

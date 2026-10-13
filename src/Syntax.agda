@@ -4,6 +4,7 @@
 --   由 agda-code-gen 从 Agda 源码（Agda.Syntax.Concrete / Common）生成，不要手改。
 --   范围（Range）去掉，名字是字符串，构造子名照 Haskell；构造子与类型同名的加 ′。
 --   只保留 parser 能产出的构造子：带抽象名、高亮、元变量的不在。
+--   多一个 Haskell 里没有的构造子 Comment：声明序列里的注释（parse 从 token 流挂上，check 前剥掉）。
 --   所有类型先给签名再给定义，所以它们是一个 mutual 块，顺序无关。
 ------------------------------------------------------------------------
 module Syntax where
@@ -134,6 +135,7 @@ data Declaration where
   Pragma′ : Pragma → Declaration
   Opaque : List Declaration → Declaration
   Unfolding : List QName → Declaration
+  Comment : String → Declaration
 
 data Expr where
   Ident : QName → Expr

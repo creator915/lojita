@@ -184,7 +184,7 @@ mutual
 | 2 Agda 侧 | `Env.agda`：Env / visible / flagsOf / Header / Code 一个归纳–递归块；栈 `Ix = Frame × List Frame`；`AgdaSig`；`mkHeader / mkCode` 运行时判定。`ToyEnv.agda` 脚本余模型全 refl；`tests/neg` 五个反例 | Lojita `src/Env.agda`、`src/ToyEnv.agda`、`neg.sh` |
 | 3 后端 | `Drive.hs`：循环 + parse / check / eval / render；check 走 `getNonMainModuleInfo`，报错带树上的路径；eval 走临时模块 + normalise + reify + deOp | 后端 `Drive.hs`、`Runtime.hs` 两个选项；二进制 `agda-cubical-run.v6` |
 | 4 子实例与世界 | enter / leave = TCState 快照栈；ask 四种处理函数（fixed / script / mailbox / http）、readF / writeF 限目录、log | 同上；`drive.sh` 七个程序 |
-| 5 编辑器步、注释、声明级依赖 | 未做 | |
+| 5 编辑器步、注释、声明级依赖 | `goals / give / split` 三个步接 BasicOps 与 MakeCase，洞的路径来自合成范围；注释从 token 流挂成 `Comment` 节点，解码跳过它但保留下标；`Iface` 的导出表每行带依赖（namesIn）与声明级哈希。`ask:http` 用 DeepSeek Flash 真跑通 | 后端 `Drive.hs`；Lojita `src/Env.agda`（Goal / Goals / Edit / Export）、`src/DriveToy.agda` §7–§8 |
 
 和设计稿不同的几处：
 - 生成的语法模块叫 `Syntax`（`Code E` 留给 Env 里的记录，两者同名会撞）；`quote` 改名 `parse`（`quote` 是 Agda 关键字）。
@@ -194,3 +194,5 @@ mutual
 - 主文件的 OPTIONS 会被 Agda 记进持久选项；驱动器在 check / eval 期间清回默认，`base` 的 flag 才是唯一策略。
 - `Generalized` 是 parser 会产出的（类型签名的类型外面套一层），保留；`DontCare` 排除。
 - 回环测试的"忠实"定义：parse → toV → fromV → toV 恒等，外加 parser 用到的构造子都在 Syntax 里；pretty → parse 不作为判据（Agda 的打印器不保证可重解析），规范文本只用来算指纹。
+- 编辑器的树上替换先放在后端（give / split 直接回 `edited 新树`），Agda 侧下一拍 check 它；设计稿里说"替换在 Agda 里做"，等 Syntax 有了可判定相等再搬过去核对。
+- 还没做：Syntax 的可判定相等（录音回放）；`render` 不打注释。

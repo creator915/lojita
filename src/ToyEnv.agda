@@ -112,6 +112,9 @@ respS w        (ask _)      = "yes" , w
 respS w        (readF _)    = nothing , w
 respS w        (writeF _ _) = false , w
 respS w        (log _)      = tt , w
+respS w        (goals _ _)     = noCheck "scripted" , w
+respS w        (give _ _ _ _)  = rejected "scripted" , w
+respS w        (split _ _ _ _) = rejected "scripted" , w
 
 backend : Comodel AgdaSig W
 backend = record { resp = respS }

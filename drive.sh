@@ -11,3 +11,7 @@ run showIface   # ok (iface ("M1" ∷ []) (("twice" , ℕ → ℕ) ∷ []) …)
 run undeclared  # fail [] "imports not in the header: Cubical.Data.Bool"
 run chain       # value (Lit (LitNat (pos 4)))         M2 import 虚拟模块 M1，eval four
 run coinf       # fail … CoInfectiveImport              Agda 自己的规则兜底
+run comments    # 4                                     注释挂成声明序列里的节点
+run showGoals   # holes ((goal 0 … ℕ) ∷ [])            洞的表
+run fillHole    # value (Lit (LitNat (pos 6)))         give 填洞 → check → eval
+run splitN      # holes (两个)                          split 分情况
