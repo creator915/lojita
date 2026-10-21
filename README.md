@@ -18,6 +18,18 @@
  槽（à la Carte）：Lifting（每条边的运输）× (X, enter, leave)（上下文 lens）× Exec（执行者）× 对手（真 / 录音）
 ```
 
+## 先读什么（2026-10-22）
+
+仓库里新旧混放。规矩一条：**日期晚的为准，`docs/harness/` 最新。** 三档：
+
+| 档 | 东西 | 怎么用 |
+| --- | --- | --- |
+| 现行规格，照着做 | `CLAUDE.md`；`docs/harness/`（从 `README.md` 读到 `07-milestones.md`）；`docs/harness-plan.md`（方案，harness/ 是它的展开） | 开工前读；改任何文件前翻对应那一页 |
+| 现行代码与测试，已通过 | `src/`（骨架 Game / PathCat / Harness / Store / Replay、Later、Env、生成的 Syntax / FlagTable、Keys、玩具 ToyEnv / ToyStore / StoreToy / DriveToy）、`tests/`、`check.sh` `neg.sh` `drive.sh` `store.sh` `recheck.sh` `rebuild.sh` | 先跑基线再改；从 M0 起按 docs/harness 改 |
+| 记录与归档，只作历史 | `docs/walkthrough.md`、`category-frame.md`、`store-and-slots.md`：10-11、10-12 的设计稿，概念仍对，文件细节已变。`code-plan.md`、`code-design.md`：Code v6 的方案与实施记录，描述的就是现在的后端。`store-plan.md`：计划，阶段 1 已完成；`store-backend.md`：阶段 1 的记录，现行；`store-relations.md`：讨论稿，待拍板 1、5 已在 harness 里定。`bench.md`：ProgramBench 一局的记录，坑未修。`archive/`：丢弃的 Code v5 与第一版 Solve / Bench。`bench/`：ProgramBench 镜像脚本，搁置 | 查来龙去脉时看；与 docs/harness 冲突的以 harness 为准 |
+
+下面的"文件"表和"现在在哪"写于 10-14；之后的进展看 `docs/harness/07-milestones.md`。
+
 ## 文件
 
 | 文件 | 管什么 |

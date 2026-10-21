@@ -7,7 +7,7 @@ module ToyEnv where
 
 open import Cubical.Foundations.Prelude using (Type; _≡_; refl)
 open import Cubical.Data.List.Base using (List; []; _∷_)
-open import Cubical.Data.Bool.Base using (Bool; true; false)
+open import Cubical.Data.Bool.Base using (Bool; true; false; if_then_else_)
 open import Cubical.Data.Nat.Base using (ℕ; zero; suc)
 open import Cubical.Data.Sigma
 open import Cubical.Data.Maybe.Base using (Maybe; nothing; just)
@@ -16,6 +16,7 @@ open import Cubical.Data.Sum.Base using (inr)
 open import Agda.Builtin.String using (String)
 open import Syntax
 open import Env
+open import Keys using (module S)
 open import Later using (Run; done; move; Comodel; module Play; module Traces)
 
 ------------------------------------------------------------------------
@@ -56,7 +57,7 @@ E₀ : Env
 E₀ = base (_=ₘ natM) safeCubical
 
 ix₀ : Ix
-ix₀ = (E₀ , 3) , []
+ix₀ = (E₀ , 3 , "") , []
 
 -- M1 import Nat；头里的两条证明都是算出来的 tt
 M1 : Code E₀
@@ -84,7 +85,7 @@ prog : Run AgdaSig A ix₀
 prog =
   move (check M1) λ
     { (ok i₁) → move (check (M2 i₁)) λ
-        { (ok i₂) → move (enter (hKid i₁ i₂) 1) λ _ →
+        { (ok i₂) → move (enter (hKid i₁ i₂) 1 "") λ _ →
                     move (ask "下一步做什么") λ a →
                     move leave λ _ →
                     done a
@@ -95,23 +96,27 @@ prog =
 -- §4 脚本余模型：check 按脚本判，脚本用完一律 ok；ask 固定答 "yes"
 ------------------------------------------------------------------------
 W : Ix → Type
-W _ = List Verdict
+W _ = List Verdict × S.Board            -- check 的脚本 × 世界（Store 的实例，在内存里）
+
+emptyBoard : S.Board
+emptyBoard _ = nothing
 
 ifaceOf : Module → Iface
 ifaceOf m = iface (modNameOf m) [] (optionsOf m) 0
 
 respS : {ix : Ix} → W ix → (o : Op ix) → Σ[ r ∈ Res o ] W (next o r)
 respS w        (parse _)    = nothing , w
-respS []       (check c)    = ok (ifaceOf (body c)) , []
-respS (v ∷ vs) (check c)    = v , vs
+respS ([] , b)       (check c) = ok (ifaceOf (body c)) , ([] , b)
+respS ((v ∷ vs) , b) (check c) = v , (vs , b)
 respS w        (eval _ _)   = error "scripted" , w
 respS w        (render _)   = "" , w
-respS w        (enter _ _)  = tt , w
+respS w        (enter _ _ _) = tt , w
 respS w        leave        = tt , w
 respS w        (ask _)      = "yes" , w
-respS w        (readF _)    = nothing , w
-respS w        (writeF _ _) = false , w
+respS {ix} w   (get k)      = (if prefixOf (realmOf ix) k then snd w k else nothing) , w   -- restrictL
+respS (vs , b) (set k v)    = tt , (vs , S.upd k (just v) b)                               -- 推前，造新版本
 respS w        (log _)      = tt , w
+respS w        (sh _)       = (0 , "") , w
 respS w        (goals _ _)     = noCheck "scripted" , w
 respS w        (give _ _ _ _)  = rejected "scripted" , w
 respS w        (split _ _ _ _) = rejected "scripted" , w
@@ -125,7 +130,7 @@ backend = record { resp = respS }
 open Traces AgdaSig using (Trace) renaming ([] to ε; _∷_ to _◁_)
 
 run : Σ[ j ∈ Ix ] (A j × W j × Trace ix₀ j)
-run = Play.play backend prog []
+run = Play.play backend prog ([] , emptyBoard)
 
 final : Ix
 final = fst run
@@ -151,7 +156,7 @@ _ = refl
 
 -- 第三条声明被驳回：环境停在 E₀ ▸ M1，结果是报错原文
 run′ : Σ[ j ∈ Ix ] (A j × W j × Trace ix₀ j)
-run′ = Play.play backend prog (ok (ifaceOf (body M1)) ∷ fail [] "no" ∷ [])
+run′ = Play.play backend prog ((ok (ifaceOf (body M1)) ∷ fail [] "no" ∷ []) , emptyBoard)
 
 _ : fst (snd run′) ≡ "no"
 _ = refl

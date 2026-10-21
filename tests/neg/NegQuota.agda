@@ -13,4 +13,4 @@ A : Ix → Type
 A _ = String
 
 bad : Run AgdaSig A ix₀
-bad = move (enter (header (natM ∷ []) safeCubical tt tt) 5) λ _ → done "too generous"
+bad = move (enter (header (natM ∷ []) safeCubical tt tt) 5 "") λ _ → done "too generous"

@@ -1,8 +1,8 @@
 #!/bin/sh
-# 真后端跑 DriveToy（先 ./check.sh）；需要 agda-cubical-run.v6
+# 真后端跑 DriveToy（先 ./check.sh）；需要 agda-cubical-run.v7（kid 用的 enter 带 realm，v6 不认）
 cd "$(dirname "$0")" || exit 1
 export LC_ALL=C.UTF-8
-AGDA=${AGDA:-/usr/local/bin/agda-cubical-run.v6}
+AGDA=${AGDA:-/usr/local/bin/agda-cubical-run.v7}
 run() { echo "--- $1"; timeout 300 "$AGDA" -v0 --cubical-drive="$1" --cubical-handler=ask:fixed:yes src/DriveToy.agda 2>/dev/null; }
 run prog        # value (Lit (LitNat (pos 6)))         parse → check → eval twice 3
 run bad         # error "…UnequalTypes…"                check 驳回，报错原文

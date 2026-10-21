@@ -1,3 +1,9 @@
 _build/
 *.agdai
 _lojita_virtual/
+runs/
+bench/ctx/
+tests/gen/
+__pycache__/
+commit.sh
+COMMIT_MSG

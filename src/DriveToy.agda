@@ -42,7 +42,7 @@ module Flow (src : String) where
   prog : Run AgdaSig A ix₀
   prog = move (parse src) step1
     where
-    step5 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3) , [])
+    step5 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3 , "") , [])
     step5 c i nothing  = done (error "M1 not visible")
     step5 c i (just h) = move (eval h twice3) λ a → done a
 
@@ -77,9 +77,9 @@ S _ = String
 kid : Run AgdaSig S ix₀
 kid = move (parse src1) step1
   where
-  step4 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig S ((E₀ ▸ (c , i) , 3) , [])
+  step4 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig S ((E₀ ▸ (c , i) , 3 , "") , [])
   step4 c i nothing  = done "M1 not visible"
-  step4 c i (just h) = move (enter h 1) λ _ → move (ask "下一步做什么") λ a → move leave λ _ → done a
+  step4 c i (just h) = move (enter h 1 "") λ _ → move (ask "下一步做什么") λ a → move leave λ _ → done a
 
   step3 : (c : Code E₀) (r : Verdict) → Run AgdaSig S (next {ix₀} (check c) r)
   step3 c (fail _ msg) = done msg
@@ -104,7 +104,7 @@ V _ = Verdict
 -- 在环境 E（配额 q）下：parse → 造头 → 造 Code → check → 交出判决
 module CheckOne (E : Env) (q : ℕ) (src : String) (is : List ModName) (fl : Flags) where
   ix : Ix
-  ix = (E , q) , []
+  ix = (E , q , "") , []
 
   run : Run AgdaSig V ix
   run = move (parse src) step1
@@ -144,16 +144,16 @@ chain = move (parse src1) step1
   E₁ c i = E₀ ▸ (c , i)
 
   step6 : (c : Code E₀) (i : Iface) (c₂ : Code (E₁ c i)) (i₂ : Iface)
-        → Maybe (Header (E₁ c i ▸ (c₂ , i₂))) → Run AgdaSig A ((E₁ c i ▸ (c₂ , i₂) , 3) , [])
+        → Maybe (Header (E₁ c i ▸ (c₂ , i₂))) → Run AgdaSig A ((E₁ c i ▸ (c₂ , i₂) , 3 , "") , [])
   step6 c i c₂ i₂ nothing  = done (error "M2 not visible")
   step6 c i c₂ i₂ (just h) = move (eval h (Ident (qn "four"))) λ a → done a
 
   step5 : (c : Code E₀) (i : Iface) (c₂ : Code (E₁ c i)) (r : Verdict)
-        → Run AgdaSig A (next {(E₁ c i , 3) , []} (check c₂) r)
+        → Run AgdaSig A (next {(E₁ c i , 3 , "") , []} (check c₂) r)
   step5 c i c₂ (fail _ msg) = done (error msg)
   step5 c i c₂ (ok i₂)      = step6 c i c₂ i₂ (mkHeader (E₁ c i ▸ (c₂ , i₂)) (("M2" ∷ []) ∷ []) safeCubical)
 
-  step4 : (c : Code E₀) (i : Iface) → Maybe Module → Run AgdaSig A ((E₁ c i , 3) , [])
+  step4 : (c : Code E₀) (i : Iface) → Maybe Module → Run AgdaSig A ((E₁ c i , 3 , "") , [])
   step4 c i nothing   = done (error "parse failed")
   step4 c i (just m₂) with mkHeader (E₁ c i) (natM ∷ ("M1" ∷ []) ∷ []) safeCubical
   ... | nothing = done (error "header rejected")
@@ -188,20 +188,20 @@ srcU = "{-# OPTIONS --cubical #-}\nmodule U where\npostulate\n  magic : Set\n"
 srcS : String
 srcS = "{-# OPTIONS --safe --cubical #-}\nmodule S where\nopen import U\n"
 
-coinf : Run AgdaSig V ((E₂ , 3) , [])            -- fail … CoInfectiveImport
+coinf : Run AgdaSig V ((E₂ , 3 , "") , [])            -- fail … CoInfectiveImport
 coinf = move (parse srcU) step1
   where
-  step3 : (c : Code E₂) (r : Verdict) → Run AgdaSig V (next {(E₂ , 3) , []} (check c) r)
+  step3 : (c : Code E₂) (r : Verdict) → Run AgdaSig V (next {(E₂ , 3 , "") , []} (check c) r)
   step3 c (fail p msg) = done (fail p msg)
   step3 c (ok i)       = CheckOne.run (E₂ ▸ (c , i)) 3 srcS (("U" ∷ []) ∷ []) safeCubical
 
-  step2 : Maybe (Header E₂) → Module → Run AgdaSig V ((E₂ , 3) , [])
+  step2 : Maybe (Header E₂) → Module → Run AgdaSig V ((E₂ , 3 , "") , [])
   step2 nothing  m = done (fail [] "header rejected")
   step2 (just h) m with mkCode E₂ h m
   ... | nothing = done (fail [] "U rejected")
   ... | just c  = move (check c) (step3 c)
 
-  step1 : Maybe Module → Run AgdaSig V ((E₂ , 3) , [])
+  step1 : Maybe Module → Run AgdaSig V ((E₂ , 3 , "") , [])
   step1 nothing  = done (fail [] "parse failed")
   step1 (just m) = step2 (mkHeader E₂ [] ("--cubical" ∷ [])) m
 
@@ -254,7 +254,7 @@ nPlusN = RawApp (List2′ (Ident (qn "n")) (Ident (qn "+")) (Ident (qn "n") ∷ 
 fillHole : Run AgdaSig A ix₀                      -- value (Lit (LitNat (pos 6)))
 fillHole = WithHole.run srcHole step error
   where
-  step4 : (h : Header E₀) (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3) , [])
+  step4 : (h : Header E₀) (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3 , "") , [])
   step4 h c i nothing   = done (error "M4 not visible")
   step4 h c i (just h′) = move (eval h′ twice3) λ a → done a
   step3 : (h : Header E₀) (c : Code E₀) (r : Verdict) → Run AgdaSig A (next {ix₀} (check c) r)
