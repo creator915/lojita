@@ -7,6 +7,17 @@
  全 refl         drive.sh         真 LLM                 dry 再真 LLM             dry        dry             dry 再真 LLM
 ```
 
+## 基线（2026-10-22，开工前，后端 v7）
+
+| 脚本 | 结果 | 用时 |
+| --- | --- | --- |
+| `./check.sh` | 退出码 0，日志里没有 error | 2 s |
+| `./neg.sh` | 七行 `rejected as expected` | 4 s |
+| `./store.sh` | 25 PASS，0 FAIL | 34 s |
+| `./drive.sh` | 十二个程序每个下一行等于 drive.sh 注释里的期望 | 6 s |
+
+日志在 `runs/baseline-2026-10-22/`（不进 git）。M0 之后每一步只许在这个基线上变好。
+
 ## M0 Agda 侧：类型先对
 
 **目标**：`Env` 的四处改动、两条引理、`Node.agda`、`ToyNode.agda` 六局全 refl、十个反例全被拒。不碰后端。
