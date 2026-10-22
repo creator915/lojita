@@ -1,5 +1,7 @@
 # 06 玩具、测试、检查器、脚本
 
+> **2026-10-22 复位**：§4（ToyNode 六局）作废，六局的断言留作新调度器玩具的目标；§8 里 NegNote 已随 Node 归档，NegPeek 与 NegLeave / NegQuota / NegRealm / NegWiden / NegTransport 查的是栈帧机制，随 Σ 换；§9 的 check.sh 已改（见文件），node.sh 待新计划。§1–§3、§5–§7 有效。
+
 一句话：每样东西一行能说清它查什么、过了长什么样。改动的文件标"改"，新文件标"新"。期望输出写死在这里，和脚本里的注释一致。
 
 ## 1 `src/ToyEnv.agda`（改）：脚本余模型

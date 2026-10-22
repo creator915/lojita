@@ -1,5 +1,7 @@
 # 03 Env.agda：窗口 Σ 的四处改动
 
+> **2026-10-22 复位**：§1（路径键）、§2（Query）、§3（transport）、§4（audit）、§4.5（checkAt、`_▸_` 只记接口）有效。§0 里"Frame / Ix / enter / leave 的形状与前置条件不动"作废：栈帧里的配额与 realm 是旧模型的继承，`enter` / `leave` 以后只管检查器会话的 Env；§5 表里 enter / leave 两行同此。分界线见 `../reset-2026-10-22.md` §3.2。
+
 一句话：`Env.agda` 是 Agda 侧的窗口，节点能做的一切都是它的一个构造子。这次改四处：键与 realm 改成路径、`ask` 换参数与回应、加 `transport`、加 `audit`。
 `Env` / `Code` / `Header` / `enter` / `leave` / `check` / `get` / `set` 的形状与前置条件不动。两条引理放在新文件 `Path.agda`。
 

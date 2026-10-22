@@ -5,30 +5,26 @@
 全部模块开着 `--safe --cubical`，没有一个 postulate：预言机（LLM、人、时钟……）、世界、数据库、运输、执行者都是模块参数，所以每条定理都是「对任何预言机、任何世界、任何执行者」成立的。
 
 ```
- 编排层   配置树 Config（底）      x ──▽ kid k（边上带运输 Lifting）──▶ x_子 ──▽──▶ …
-                                   │ Fiber x                              │ Fiber x_子
-                                   ▼                                      ▼
- 代理层   纤维 Fiber x       棋盘 b ──棋谱 ask/run/sub──▶ 棋盘 b′      对象 = 棋盘，箭头 = 合法棋谱
-                                   │ 一步 run
-                                   ▼
- 对象层   数据库 Store       实例 s ──事务（一列 get/set）──▶ 实例 s′     工具 = 这一层的程序
+ 2026-10-22 晚复位后的一句话：系统是一个关系式文件库；一切皆文件；每个文件挂着 memory 与权限；
+ 特定的行被写就唤起该文件的 agent 跑一轮；agent 之间只有行（协议），没有调用（继承）；与人对话的会话 agent 挂在根上。
 
- 唯一的义务 Honest：对手每答一步都是 Fiber x 的一步
- 定理 soundHonest：诚实的对手 + 任何策略 ⇒ 跑出来的棋谱是 Fiber x 里的一条箭头
- 槽（à la Carte）：Lifting（每条边的运输）× (X, enter, leave)（上下文 lens）× Exec（执行者）× 对手（真 / 录音）
+ 文件库（Store）     p/spec/* ──写──▶ 唤起 p.agent 跑一轮 ──写──▶ p/result ──▶ 唤起 p 的父（或根会话）
+                     p/kids/K/spec/* ◀── p.agent 写（open K）      K/result ◀── K.agent 写（K close）
+ 四类操作           open / close / read / write，是操作的类型；Σ 是文件的目录
+ 调度器             一个查询（谁被唤起）+ 一个循环；它是操作系统，不是 agent
 ```
 
 ## 先读什么（2026-10-22）
 
-仓库里新旧混放。规矩一条：**日期晚的为准，`docs/harness/` 最新。** 三档：
+仓库里新旧混放。规矩一条：**日期晚的为准，`docs/reset-2026-10-22.md` 最新。** 三档：
 
 | 档 | 东西 | 怎么用 |
 | --- | --- | --- |
-| 现行规格，照着做 | `CLAUDE.md`；`docs/harness/`（从 `README.md` 读到 `07-milestones.md`）；`docs/harness-plan.md`（方案，harness/ 是它的展开） | 开工前读；改任何文件前翻对应那一页 |
-| 现行代码与测试，已通过 | `src/`（骨架 Game / PathCat / Harness / Store / Replay、Later、Path、Env、生成的 Syntax / FlagTable、Keys、Node、玩具 ToyEnv / ToyStore / StoreToy / DriveToy / ToyNode）、`tests/`、`check.sh` `neg.sh` `drive.sh` `store.sh` `recheck.sh` `rebuild.sh` | 先跑基线再改；M0（Agda 侧）已于 2026-10-22 完成，结果在 `docs/harness/07-milestones.md`；下一步 M1 按 docs/harness 改 |
-| 记录与归档，只作历史 | `docs/walkthrough.md`、`category-frame.md`、`store-and-slots.md`：10-11、10-12 的设计稿，概念仍对，文件细节已变。`code-plan.md`、`code-design.md`：Code v6 的方案与实施记录，描述的就是现在的后端。`store-plan.md`：计划，阶段 1 已完成；`store-backend.md`：阶段 1 的记录，现行；`store-relations.md`：讨论稿，待拍板 1、5 已在 harness 里定。`bench.md`：ProgramBench 一局的记录，坑未修。`archive/`：丢弃的 Code v5 与第一版 Solve / Bench。`bench/`：ProgramBench 镜像脚本，搁置 | 查来龙去脉时看；与 docs/harness 冲突的以 harness 为准 |
+| 现行规格，照着做 | `CLAUDE.md`；`docs/reset-2026-10-22.md`（复位：旧在哪、清掉什么、留什么、新基础、待拍板、下一步 D0–D4）；`docs/harness/`（10-21 的展开，各页顶上一行写着哪些段作废，README 有速查表；01、10 两页是新基础的底） | 开工前读；D0 讨论后 reset §四搬进新的 docs/harness/ |
+| 现行代码与测试，已通过 | `src/`（Game / PathCat / Later、Store / Keys / Path、Env、生成的 Syntax / FlagTable、玩具 ToyEnv / StoreToy / DriveToy）、`tests/`、`check.sh` `neg.sh` `drive.sh` `store.sh` `recheck.sh` `rebuild.sh` | 先跑基线再改；`Env.agda` §3 的栈帧是旧模型的，D1 换 Σ 时去掉（reset §3.2） |
+| 记录与归档，只作历史 | `archive/2026-10-22-subagent-tree/`：subagent 递归的那一套（Harness / Replay / ToyStore / Node / ToyNode、04-node、harness-plan、walkthrough、category-frame、store-and-slots），README 写了哪些零件新写时照搬。`docs/store-relations.md`：10-14 的讨论，树 vs 关系，restarting 一侧就是现在的方向。`code-plan.md`、`code-design.md`：Code v6，描述的就是现在的后端。`store-plan.md`、`store-backend.md`：Store 阶段 1，现行。`bench.md`、`archive/2026-10-13-*`、`bench/`：ProgramBench 与早期归档 | 查来龙去脉时看 |
 
-下面的"文件"表和"现在在哪"写于 10-14；之后的进展看 `docs/harness/07-milestones.md`。
+下面的"文件"表和"现在在哪"写于 10-14；之后的进展看 `docs/reset-2026-10-22.md`。
 
 ## 文件
 
@@ -36,20 +32,12 @@
 | --- | --- |
 | `src/Game.agda` | 签名 → 程序（自由模型）、对手（余模型）、棋谱（由签名导出）、跑一局 |
 | `src/PathCat.agda` | 机器（棋规）→ 范畴（合法棋谱）；确定对手的定理 `soundDet` |
-| `src/Harness.agda` | 配置树（边上带运输）、三类步 ask/run/sub、纤维、`Honest` 与 `soundHonest`、执行者 `Exec`、对手族 `Dynamics`（上下文 lens + 执行者为参数）、局面与产品、反射点 |
 | `src/Store.agda` | 对象层数据库：实例与写、快照查询（cut）、方块 `Filled`（不同键机器填）、子 schema 的 lens（三条律）、沿 `ua` 搬运、给 Harness 的运输 `whole` / `realm` |
-| `src/Replay.agda` | Rebuilder：`verify`（可判定的合法性 = verifying trace）、录音对手 `wrap`（constructive trace）、`wrap-honest` |
-| `src/ToyStore.agda` | 玩具实例：键值数据库上跑一局；换运输、换对手（录音回放、录音失效）；全部 `refl` |
-| `docs/walkthrough.md` | 骨架四文件逐段讲解（2026-10-11） |
-| `docs/category-frame.md` | 骨架一页结论（2026-10-11） |
-| `docs/store-and-slots.md` | 数据库、Scheduler、Rebuilder：结构、槽、决定、留白（2026-10-12） |
 | `src/Later.agda` | 延迟模态 ▷：拍签名 `TSig`、带环境索引的程序 `Run`、路 `Walk`（程序与棋谱共用）、余模型、`play`（2026-10-13） |
 | `src/Syntax.agda` | **生成的**：Agda 的具体语法（parser 吐出来的那棵树），74 个类型 264 个构造子，由后端的 `agda-code-gen gen` 从 Agda 源码生成；范围去掉、名字是字符串、糖和 unsafe 都在 |
 | `src/FlagTable.agda` | **生成的**：哪些 flag 是 infective / coinfective（`agda-code-gen flags`） |
 | `src/Path.agda` | 路径键（2026-10-22，M0）：`Path = List String`、`isPrefix`（用 `discreteString`，引理能证）、`prefix-++` / `prefix-refl`、`_≤ᵇ_` / `≤ᵇ-refl`、`half` / `half-≤`、`join`、`discretePath` |
 | `src/Env.agda` | 环境 `Env`（父给的库与模式 ▸ 过了检查的模块的接口）、头 `Header E`、`Code E`（只管模块边界）、栈 `Ix`（键与 realm 是路径）、签名 `AgdaSig`（parse / check / checkAt / eval / render / enter（带 realm）/ leave / ask（Query → 文件名表）/ get / set / transport / audit / log / sh / goals / give / split）、接口的导出表、运行时造头造 Code 的判定（2026-10-13，M0 改于 2026-10-22） |
-| `src/Node.agda` | 文件 agent 的程序（2026-10-22，M0）：`NodeSig`（agent 能用的步）与 `embed`、键与证明、答卷分类、沙箱 / 粘合帧、提示词 Query、主循环（解答 / 分解 / 孩子 / 改设计 / 反驳）；参数是 E₀ |
-| `src/ToyNode.agda` | `node` 在脚本余模型上的六局（单节点、重试、分解、孩子反驳后改设计、两孩子一个 keep、配额耗尽），全部 `refl` |
 | `src/ToyEnv.agda` | 脚本余模型（剧本 `Script`：check / ask / transport / audit 四张）跑一局：check 两个模块、开一个窄的子实例、问一次、回来，全 `refl`；ToyNode 的六局也用它 |
 | `src/DriveToy.agda` | 真后端跑的十二个程序（`./drive.sh`）：parse → check → eval、驳回带路径、子实例、接口、头里没写的 import、M2 import 虚拟模块 M1、`--safe` 兜底、注释节点、洞的表、填洞、分情况、λ { … } 里分情况 |
 | `src/Keys.agda` | 后端要实现的那个 Store：`discreteString`（由内建 injective 引理推出）、`S = Store String String` |
@@ -64,14 +52,15 @@
 | `docs/bench.md` | 跑 ProgramBench：题目镜像 + 解释器那一层、一局的拓扑、`sh` 这一步、踩到的坑（2026-10-13） |
 | `docs/code-design.md` | 设计稿与实施记录（2026-10-13）：生成器、Env / Code E、AgdaSig、后端接在 agda 的哪几个入口、子实例、待拍板与已定 |
 | `archive/2026-10-13-code-v5/` | 归档：Code 的核心子集版（名字按层号、接反射 API）与它的玩具、文档、驱动脚本；后端 v5 在 `/root/lojita-discarded/backend-v5` |
+| `archive/2026-10-22-subagent-tree/` | 归档（2026-10-22 晚）：subagent 递归的那一套——`Harness.agda`（配置树、`sub`、`Dynamics` lens）、`Replay.agda`、`ToyStore.agda`、`Node.agda`（递归 `node`，`enter` 孩子等返回值）、`ToyNode.agda`（六局）、`NegNote.agda`、`04-node.md`、`harness-plan.md`、三份 10-11 / 10-12 的讲解；README 写了为什么归档、哪些零件照搬、怎么退回 |
 
 ## 检查
 
 需要 Agda（≥ 2.6.3）和 cubical 库（在 `~/.agda/libraries` 里登记，库名 `cubical`）。
 
 ```
-./check.sh        # = agda src/ToyStore.agda && agda src/ToyEnv.agda，顺带检查其余模块
-./neg.sh          # 七个反例必须编译失败
+./check.sh        # Path、ToyEnv、StoreToy、DriveToy（2026-10-22 复位后；Harness / Node 一系已归档）
+./neg.sh          # 九个反例必须编译失败（NegNote 随 Node 归档）
 ./drive.sh        # 真后端（agda-cubical-run.v7）跑 DriveToy 的十二个程序
 ./store.sh        # Store 的硬盘余模型：F 组不要后端（fold / 日志 → Agda refl），B 组八项（回环、realm、重启、撕裂与 kill -9、dump = fold、blob、压力、日志 → Agda）
 ./recheck.sh      # 十个真实文件走 parse → 树 → 检查
@@ -87,6 +76,8 @@ LOJITA_API_KEY=… bench/run.sh junegunn__fzf.b56d614 && bench/eval.sh runs/benc
 已验证：Game–ToyStore 六个模块 Agda 2.6.3 + cubical v0.5（commit 132a2a3）；Later 在服务器上 Agda 2.9.0 + cubical（commit 9216603）；全部零警告。
 
 ## 现在在哪
+
+**2026-10-22 晚，复位。** 10-11 到 10-22 上午的骨架（配置树 + `sub`、Env 的栈帧、递归 `node`）是 DeepSeek Harness 式的 subagent 递归，已归档；新基础是文件库 + 触发器，见 `docs/reset-2026-10-22.md`。Store / Later / Env 的接口部分、路径键、Query / transport / audit / checkAt 都留着。下面是 10-14 写的记录，仍描述现在的后端 v7 与 Store 阶段 1。
 
 骨架、数据库、Rebuilder、Scheduler 的槽都在；延迟模态 ▷（`src/Later.agda`）已到位。
 

@@ -1,5 +1,7 @@
 # 05 后端 v8：Drive.hs 的六处改动
 
+> **2026-10-22 复位**：§1–§7 的六处改动有效，仍是后端 v8 要做的。§0 / §8 里"enter / leave 的快照栈不动"改为：快照栈只管 TCState（检查器会话），不再记 realm 与配额；另加触发循环（算谁被唤起、跑一轮），见 `../reset-2026-10-22.md` §4.3、§4.6、§六 D3。
+
 一句话：后端是手。v8 在 v7 上只动 `Drive.hs`：路径 join、`ask` 渲染提示词并把答卷拆进 Store、`transport`、`audit`、日志行加 `by`、接口缓存只在 `--safe` 帧写。
 `check`、`enter` / `leave` 的快照栈、`store:DIR`、`Code.hs`、生成器都不动。源码留 `/root/agda-backend/v8/`，二进制 `/usr/local/bin/agda-cubical-run.v8`。
 

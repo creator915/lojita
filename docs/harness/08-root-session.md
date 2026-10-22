@@ -1,5 +1,7 @@
 # 08 根会话、Boot.agda、E₀、IO 根
 
+> **2026-10-22 复位**：§1、§3、§4、§5 有效。§2 的 `Boot.agda`（`embedRun (node …)`、"node 自己在 enter 孩子时才把 realm 收窄"）作废：根会话是挂在根 `[]` 上的 agent，写 `<R>/spec/*` 与 `<R>/quota` 后等 `<R>/result`，见 `../reset-2026-10-22.md` §4.7。
+
 一句话：根会话是人与 LLM 的那几轮对话，产物是根的两段 spec、E₀、配额、树深；v1 里这些是 `Boot.agda` 的常量。
 根是唯一碰 IO 的节点，但它也只是一个 `Run` 程序；验证时对手是 mock 余模型，部署时换成真 handler。两个微服务 = 同一签名的两端。
 

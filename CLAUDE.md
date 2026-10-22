@@ -1,7 +1,7 @@
 # Lojita：给 Claude Code 的工作规矩
 
-- 规格在 `docs/harness/`：`README.md` 是索引，`07-milestones.md` 是当前要做的事。改任何文件前先读对应的那一页；每条验收标准是一条命令加一行期望输出，照着跑。
-- 当前里程碑：M0（Agda 侧）已于 2026-10-22 完成，结果记在 `docs/harness/07-milestones.md` 的 M0 表里；下一个是 M1（后端 v8，看 `05-backend.md` 与 07 的 M1 表），尚未开始。M0 的顺序曾是 `src/Path.agda` → `src/Env.agda` → 改键 → `./check.sh` 过 → `src/Node.agda` → `src/ToyNode.agda` S1 … S6，M0 没碰后端。
+- **2026-10-22 晚复位**：先读 `docs/reset-2026-10-22.md`。subagent 递归（Harness / Replay / ToyStore / Node / ToyNode、04-node、harness-plan）已归档到 `archive/2026-10-22-subagent-tree/`；新基础 = 文件库 + 触发器（一切皆文件，agent 之间只有行，没有调用）。`docs/harness/` 各页顶上一行写着哪些段作废；README 里有速查表。
+- 下一步是 D0（讨论，拍板 reset §4.8 七条）→ D1（Σ 目录化：新 Env）→ D2（Agent 一轮 + 玩具调度器）→ D3（后端 v8 + 触发循环）→ D4（真跑）。不要再在 `Env.agda` §3 的栈帧（配额、realm 继承）上搭东西；`enter` / `leave` 以后只管检查器会话。
 - 动手前先跑基线：`./check.sh`、`./neg.sh`、`./store.sh`、`./drive.sh`，记下现在哪些过；改完每一步再跑，只许变好。
 - 永不手改生成的文件：`src/Syntax.agda`、`src/FlagTable.agda`。
 - 跑 agda 必须 `LC_ALL=C.UTF-8`。默认 `agda` 是 `/usr/local/bin/agda-cubical-run.v7`；M1 做出 v8 后再换链接。
