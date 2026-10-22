@@ -3,7 +3,7 @@
 -- DriveToy.agda —— 真后端跑一局（agda-cubical-run.v6 --cubical-drive=…）
 --   prog   parse 一段文本 → check → eval 里面的函数（twice 3 → 6）
 --   bad    同一流程，但模块有类型错：check 驳回，拿到报错原文和树上的路径
---   kid    check 过 M1 之后开一个只看得见 M1 的子实例，问一次 LLM，回来
+--   kid    check 过 M1 之后开一个只看得见 M1 的子实例（realm 是路径 []），问一次 LLM，回来交出文件名表
 -- 用脚本余模型（ToyEnv）跑不了 parse/eval 的真结果，所以这三个只在真后端上跑：./drive.sh
 ------------------------------------------------------------------------
 module DriveToy where
@@ -12,7 +12,7 @@ open import Cubical.Foundations.Prelude using (Type)
 open import Cubical.Data.List.Base using (List; []; _∷_)
 open import Cubical.Data.Nat.Base using (ℕ; zero; suc; _+_)
 open import Cubical.Data.Int.Base using (pos)
-open import Cubical.Data.Sigma
+open import Cubical.Data.Sigma hiding (Path)
 open import Cubical.Data.Maybe.Base using (Maybe; nothing; just)
 open import Agda.Builtin.String using (String)
 open import Syntax
@@ -42,13 +42,13 @@ module Flow (src : String) where
   prog : Run AgdaSig A ix₀
   prog = move (parse src) step1
     where
-    step5 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3 , "") , [])
+    step5 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ i)) → Run AgdaSig A ((E₀ ▸ i , 3 , []) , [])
     step5 c i nothing  = done (error "M1 not visible")
     step5 c i (just h) = move (eval h twice3) λ a → done a
 
     step4 : (c : Code E₀) (r : Verdict) → Run AgdaSig A (next {ix₀} (check c) r)
     step4 c (fail _ msg) = done (error msg)
-    step4 c (ok i)       = step5 c i (mkHeader (E₀ ▸ (c , i)) (("M1" ∷ []) ∷ []) safeCubical)
+    step4 c (ok i)       = step5 c i (mkHeader (E₀ ▸ i) (("M1" ∷ []) ∷ []) safeCubical)
 
     step3 : Maybe (Code E₀) → Run AgdaSig A ix₀
     step3 nothing  = done (error "module name not fresh, or OPTIONS wider than the header")
@@ -69,30 +69,27 @@ bad : Run AgdaSig A ix₀
 bad = Flow.prog srcBad
 
 ------------------------------------------------------------------------
--- §3 check → enter（只给 M1，配额 1）→ ask → leave → 交出 LLM 的回答
+-- §3 check → enter（只给 M1，配额 1）→ ask → leave → 交出 ask 的回应（步号 ∷ 文件名）
 ------------------------------------------------------------------------
 S : Ix → Type
-S _ = String
+S _ = List String                                 -- ask 的回应：步号 ∷ 答卷拆出的文件名
 
 kid : Run AgdaSig S ix₀
 kid = move (parse src1) step1
   where
-  step4 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig S ((E₀ ▸ (c , i) , 3 , "") , [])
-  step4 c i nothing  = done "M1 not visible"
-  step4 c i (just h) = move (enter h 1 "") λ _ → move (ask "下一步做什么") λ a → move leave λ _ → done a
-
+  step4 : (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ i)) → Run AgdaSig S ((E₀ ▸ i , 3 , []) , [])
+  step4 c i nothing  = done ("M1 not visible" ∷ [])
+  step4 c i (just h) = move (enter h 1 []) λ _ → move (ask (lit "下一步做什么" ∷ [])) λ a → move leave λ _ → done a
   step3 : (c : Code E₀) (r : Verdict) → Run AgdaSig S (next {ix₀} (check c) r)
-  step3 c (fail _ msg) = done msg
-  step3 c (ok i)       = step4 c i (mkHeader (E₀ ▸ (c , i)) (("M1" ∷ []) ∷ []) safeCubical)
-
+  step3 c (fail _ msg) = done (msg ∷ [])
+  step3 c (ok i)       = step4 c i (mkHeader (E₀ ▸ i) (("M1" ∷ []) ∷ []) safeCubical)
   step2 : Maybe (Header E₀) → Module → Run AgdaSig S ix₀
-  step2 nothing  m = done "header rejected"
+  step2 nothing  m = done ("header rejected" ∷ [])
   step2 (just h) m with mkCode E₀ h m
-  ... | nothing = done "module rejected"
+  ... | nothing = done ("module rejected" ∷ [])
   ... | just c  = move (check c) (step3 c)
-
   step1 : Maybe Module → Run AgdaSig S ix₀
-  step1 nothing  = done "parse failed"
+  step1 nothing  = done ("parse failed" ∷ [])
   step1 (just m) = step2 (mkHeader E₀ (natM ∷ []) safeCubical) m
 
 ------------------------------------------------------------------------
@@ -104,7 +101,7 @@ V _ = Verdict
 -- 在环境 E（配额 q）下：parse → 造头 → 造 Code → check → 交出判决
 module CheckOne (E : Env) (q : ℕ) (src : String) (is : List ModName) (fl : Flags) where
   ix : Ix
-  ix = (E , q , "") , []
+  ix = (E , q , []) , []
 
   run : Run AgdaSig V ix
   run = move (parse src) step1
@@ -141,19 +138,19 @@ chain : Run AgdaSig A ix₀                         -- value (Lit (LitNat (pos 4
 chain = move (parse src1) step1
   where
   E₁ : (c : Code E₀) (i : Iface) → Env
-  E₁ c i = E₀ ▸ (c , i)
+  E₁ c i = E₀ ▸ i
 
   step6 : (c : Code E₀) (i : Iface) (c₂ : Code (E₁ c i)) (i₂ : Iface)
-        → Maybe (Header (E₁ c i ▸ (c₂ , i₂))) → Run AgdaSig A ((E₁ c i ▸ (c₂ , i₂) , 3 , "") , [])
+        → Maybe (Header (E₁ c i ▸ i₂)) → Run AgdaSig A ((E₁ c i ▸ i₂ , 3 , []) , [])
   step6 c i c₂ i₂ nothing  = done (error "M2 not visible")
   step6 c i c₂ i₂ (just h) = move (eval h (Ident (qn "four"))) λ a → done a
 
   step5 : (c : Code E₀) (i : Iface) (c₂ : Code (E₁ c i)) (r : Verdict)
-        → Run AgdaSig A (next {(E₁ c i , 3 , "") , []} (check c₂) r)
+        → Run AgdaSig A (next {(E₁ c i , 3 , []) , []} (check c₂) r)
   step5 c i c₂ (fail _ msg) = done (error msg)
-  step5 c i c₂ (ok i₂)      = step6 c i c₂ i₂ (mkHeader (E₁ c i ▸ (c₂ , i₂)) (("M2" ∷ []) ∷ []) safeCubical)
+  step5 c i c₂ (ok i₂)      = step6 c i c₂ i₂ (mkHeader (E₁ c i ▸ i₂) (("M2" ∷ []) ∷ []) safeCubical)
 
-  step4 : (c : Code E₀) (i : Iface) → Maybe Module → Run AgdaSig A ((E₁ c i , 3 , "") , [])
+  step4 : (c : Code E₀) (i : Iface) → Maybe Module → Run AgdaSig A ((E₁ c i , 3 , []) , [])
   step4 c i nothing   = done (error "parse failed")
   step4 c i (just m₂) with mkHeader (E₁ c i) (natM ∷ ("M1" ∷ []) ∷ []) safeCubical
   ... | nothing = done (error "header rejected")
@@ -188,20 +185,20 @@ srcU = "{-# OPTIONS --cubical #-}\nmodule U where\npostulate\n  magic : Set\n"
 srcS : String
 srcS = "{-# OPTIONS --safe --cubical #-}\nmodule S where\nopen import U\n"
 
-coinf : Run AgdaSig V ((E₂ , 3 , "") , [])            -- fail … CoInfectiveImport
+coinf : Run AgdaSig V ((E₂ , 3 , []) , [])            -- fail … CoInfectiveImport
 coinf = move (parse srcU) step1
   where
-  step3 : (c : Code E₂) (r : Verdict) → Run AgdaSig V (next {(E₂ , 3 , "") , []} (check c) r)
+  step3 : (c : Code E₂) (r : Verdict) → Run AgdaSig V (next {(E₂ , 3 , []) , []} (check c) r)
   step3 c (fail p msg) = done (fail p msg)
-  step3 c (ok i)       = CheckOne.run (E₂ ▸ (c , i)) 3 srcS (("U" ∷ []) ∷ []) safeCubical
+  step3 c (ok i)       = CheckOne.run (E₂ ▸ i) 3 srcS (("U" ∷ []) ∷ []) safeCubical
 
-  step2 : Maybe (Header E₂) → Module → Run AgdaSig V ((E₂ , 3 , "") , [])
+  step2 : Maybe (Header E₂) → Module → Run AgdaSig V ((E₂ , 3 , []) , [])
   step2 nothing  m = done (fail [] "header rejected")
   step2 (just h) m with mkCode E₂ h m
   ... | nothing = done (fail [] "U rejected")
   ... | just c  = move (check c) (step3 c)
 
-  step1 : Maybe Module → Run AgdaSig V ((E₂ , 3 , "") , [])
+  step1 : Maybe Module → Run AgdaSig V ((E₂ , 3 , []) , [])
   step1 nothing  = done (fail [] "parse failed")
   step1 (just m) = step2 (mkHeader E₂ [] ("--cubical" ∷ [])) m
 
@@ -254,12 +251,12 @@ nPlusN = RawApp (List2′ (Ident (qn "n")) (Ident (qn "+")) (Ident (qn "n") ∷ 
 fillHole : Run AgdaSig A ix₀                      -- value (Lit (LitNat (pos 6)))
 fillHole = WithHole.run srcHole step error
   where
-  step4 : (h : Header E₀) (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ (c , i))) → Run AgdaSig A ((E₀ ▸ (c , i) , 3 , "") , [])
+  step4 : (h : Header E₀) (c : Code E₀) (i : Iface) → Maybe (Header (E₀ ▸ i)) → Run AgdaSig A ((E₀ ▸ i , 3 , []) , [])
   step4 h c i nothing   = done (error "M4 not visible")
   step4 h c i (just h′) = move (eval h′ twice3) λ a → done a
   step3 : (h : Header E₀) (c : Code E₀) (r : Verdict) → Run AgdaSig A (next {ix₀} (check c) r)
   step3 h c (fail _ msg) = done (error msg)
-  step3 h c (ok i)       = step4 h c i (mkHeader (E₀ ▸ (c , i)) (("M4" ∷ []) ∷ []) safeCubical)
+  step3 h c (ok i)       = step4 h c i (mkHeader (E₀ ▸ i) (("M4" ∷ []) ∷ []) safeCubical)
   step2 : Header E₀ → Edit → Run AgdaSig A ix₀
   step2 h (rejected msg) = done (error msg)
   step2 h (edited m′) with mkCode E₀ h m′

@@ -10,7 +10,7 @@
  W ix = Script × ℕ × S.Board          剧本 × 步号 × 内存里的 Store
  Script = record
    checks     : List Verdict           check 按序答；用完一律 ok（同 v7）
-   asks       : List (List (String × String))   每次 ask 一份答卷：(文件名 , 文本) 的表；用完回 []
+   asks       : List (List (String × String))   每次 ask 一份答卷：(文件名 , 文本) 的表；用完回只有步号的表（同后端拒收时的回应）
    transports : List Filled             transport 按序答；用完一律 filled 0
    audits     : List Bool               audit 按序答；用完一律 true
 ```
@@ -25,7 +25,9 @@
  get / set    不变，键是路径（join 成 "a/x" 存进 S.Board，和后端一致）
 ```
 
-验收：`./check.sh` 过；原来的五条 refl（"yes"、M2 可见、M3 不可见、配额 2、五步）不变。
+`M2 i`、`hKid i₁ i₂` 改用 `mkHeader` / `mkCode` 在运行时造（`_▸_` 只记接口后，"M1 看得见"取决于接口的名字，见 `03-env.md` §4.5）。
+
+验收：`./check.sh` 过；原来的五条 refl（"yes"、M2 可见、M3 不可见、配额 2、五步）不变——"yes" 现在是答卷里第一个文件的名字；另加一条：答卷落在子实例的 `draft/0/` 下。
 
 ## 2 `src/StoreToy.agda`（改）：键改路径
 
@@ -54,8 +56,9 @@
 
 ## 4 `src/ToyNode.agda`（新）：六局
 
-见 `04-node.md` §9 的表。每局：造剧本 → `Play.play backend (embedRun (node d p sp)) w₀` → 断言结局、enter 次数、关键行存在，全部 `refl`。
-数 enter 次数的函数：遍历 trace 数 `enter` 构造子。查键的函数：`board k ≡ just _`。
+见 `04-node.md` §9 的表。每局：造剧本 → `Play.play backend (embedRun (node d q ("t" ∷ []) "X")) (剧本 , 0 , emptyBoard)` → 断言结局、enter / ask 次数、关键行，全部 `refl`。
+`Node` 的实例：`module N = Node (natM ∷ []) safeCubical ("--cubical" ∷ []) tt tt tt`。
+数 enter 次数的函数：遍历 trace 数 `enter` 构造子；数"开某个孩子"的次数：目标前缀等于它且不等于当前 realm（排除孩子自己的沙箱 / 粘合）。查键的函数：`board "t/result" ≡ just "…"`（键是 join 过的字符串）。
 
 ## 5 `tests/node/scripts/*.txt`（新）：预置答卷
 
@@ -100,7 +103,7 @@
 | NegVisible、NegFlags、NegUnsafe、NegLeave、NegQuota | 同 v7 | 不动 |
 | NegRealm、NegWiden | 键与 realm 改成路径 | 改 |
 | NegTransport | `transport` 的目标键在 realm 外 | 新 |
-| NegNote | 在 `Run NodeSig` 里想 set `code/…`：`Note` 没有这个构造子 | 新 |
+| NegNote | 在 `Run NodeSig` 里想用 `set` 写 `code/…`：NodeSig 没有裸的 `set`（`Env.Op` 的 set 对不上 `NodeOp`），`Note` 也没有 code 这一种 | 新 |
 | NegPeek | 孩子帧的头想 import 父在节点帧里 check 过的模块：`mkHeader` 造不出 | 新 |
 
 `./neg.sh`：十行 `rejected as expected`。
@@ -109,7 +112,7 @@
 
 | 脚本 | 做什么 | 过了 |
 | --- | --- | --- |
-| `check.sh`（改） | 加 `src/Path.agda`、`src/Node.agda`、`src/ToyNode.agda`、`src/Boot.agda` | 无 error |
+| `check.sh`（改） | 加 `src/Path.agda`、`src/Node.agda`、`src/ToyNode.agda`（M0 已加）、`src/Boot.agda`（M2） | 无 error |
 | `neg.sh`（不改） | 自动扫 `tests/neg/*.agda` | 十行 rejected |
 | `drive.sh`（改） | 加 §3 的十一个程序；`askSplit` / `askPlain` 用 `--cubical-handler=ask:script:tests/node/scripts/drive-split.txt` | 每个程序下一行等于注释 |
 | `store.sh`（改） | B 组后加 B9：对 `drive-fillOne` 这一局跑 `schema.py` | `28 passed, 0 failed` |

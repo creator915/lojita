@@ -52,9 +52,25 @@
 
 **完成标志**：M0-1、M0-2、M0-4、M0-5 全过。
 
+**结果（2026-10-22，完成）**
+
+| 编号 | 结果 |
+| --- | --- |
+| M0-1 | 过：`./check.sh` 退出码 0、无 error，4 s（含 Path、Node、ToyNode 六局 refl） |
+| M0-2 | 过：十行 `rejected as expected` |
+| M0-3 | F 组 4/4 过（含 LogTx 键拆成路径后的 refl）；B 组 15 条在 v7 上失败，报错一律 `--cubical-drive: expected a string, got VList [...]`（键是列表；M1 的 join 恢复） |
+| M0-4 | 过：`grep -c prefixOf src/*.agda` 全 0 |
+| M0-5 | 过：`NodeOp` 的构造子只有 ask get setN transport audit checkAt enter leave log；grep 命中的只是 `show…` 这些名字和注释 |
+| E1–E9 | 全过（`03-env.md` §7） |
+
+同时记一笔：`./drive.sh` 在 v7 上 `kid` 一条会变（`ask` 回 `List String`、realm 是路径，v7 回字符串），其余十一条不受影响；M1 换 v8 后按 `06-toys-tests.md` §3 重写 drive.sh。
+`src/Node.agda` 的 `Spec` 简化成模块名 `X : String`；`Kind` 的 `solution` / `design` 带主文件名；ToyEnv 的 `asks` 用完回只有步号的表（`04`、`06` 两页已同步）。
+
 **回滚**：`git -C /root/lojita checkout -- src tests check.sh`。
 
-**风险与判断**：`checkAll` 的索引写法最容易卡；卡住时先把 `keys` 定成长度 2 的具体列表写通，再推广到列表递归。`prefix-++` 若证不出，看 `isPrefix` 是否真的用了 `discreteString`（用 `primStringEquality` 就证不出）。
+**风险与判断**：`checkAll` 的索引写法最容易卡；实际的写法见 `04-node.md` §5、§7：进沙箱后只有栈顶环境在变，把它做成显式参数；
+节点的配额是索引不做递归，递归在 fuel（每次 ask 减一）上，ask 前 `fromDec (1 ≤ᵇ q)` 查配额；孩子回来走续体（CPS），所以 `leave` 对任何终点配额都写得出。
+`prefix-++` 若证不出，看 `isPrefix` 是否真的用了 `discreteString`（用 `primStringEquality` 就证不出）。
 
 ## M1 后端 v8：手跟上
 

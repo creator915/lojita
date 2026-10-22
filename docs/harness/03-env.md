@@ -45,7 +45,12 @@ prefix-++ : ∀ p s → isPrefix p (p ++ s) ≡ true       -- 对 p 归纳；每
 
 half : ℕ → ℕ                                         -- 给孩子分配额用：half 0 = 0 ; half 1 = 0 ; half (2+n) = 1 + half n
 half-≤ : ∀ q → half q ≤ᵇ q ≡ true
+prefix-refl : ∀ p → isPrefix p p ≡ true              -- 同前缀开沙箱 / 粘合帧
+discretePath : Discrete Path                         -- discreteList discreteString；LogTx 用 Store Path String
+join : Path → String                                 -- "a" ∷ "x" ∷ [] ↦ "a/x"：脚本余模型存 S.Board 的键、result 行里的键
 ```
+
+`_≤ᵇ_` 也搬进 `Path.agda`（`≤ᵇ-refl` 要用它）；`Env` 用 `open import Path public using (Path; isPrefix; _≤ᵇ_)` 原样再导出，别的文件照旧从 `Env` 拿。
 
 ### 用法
 
@@ -140,6 +145,10 @@ data Env where
 
 `check : Code E → Op` 保留（DriveToy 还用它），`next (check c) (ok i) = E ▸ i`。`Code E` 里的 `fresh`、`opts-ok` 不变。
 
+后果：`visible (E ▸ i) n` 取决于接口 i 的名字。i 是跑出来的数据时（`λ { (ok i) → … }` 里），"import 刚 check 过的模块"的头
+不能再写 `tt`，要用 `mkHeader` / `mkCode` 在运行时造（名字对就 `just`）：ToyEnv 的 `M2 i`、`hKid i₁ i₂` 改成这样，DriveToy 原本就这样。
+字面量环境（`E₀`、`E⁻`）下的头照旧 `tt`。
+
 ## 5 改动后的 Op 一览
 
 | 构造子 | 变化 |
@@ -160,11 +169,11 @@ data Env where
 
 | 文件 | 改什么 |
 | --- | --- |
-| `src/ToyEnv.agda` | 键写成路径；`W` 加一个步号和三张脚本（ask 的答卷、transport 的回应、audit 的回应）；`respS` 补 ask / transport / audit 三个分支（见 `06-toys-tests.md` §1） |
+| `src/ToyEnv.agda` | 键写成路径；`W` 加一个步号和四张脚本（check 的判决、ask 的答卷、transport 的回应、audit 的回应）；`respS` 补 ask / transport / audit / checkAt 四个分支；`M2 i`、`hKid i₁ i₂` 改用 mkHeader / mkCode（见 `06-toys-tests.md` §1） |
 | `src/StoreToy.agda` | 十一个程序的键改成路径，如 `"a" ∷ "x" ∷ []`；§7 九条 refl 的值不变 |
 | `src/DriveToy.agda` | `kid` 等用到 realm 的地方改成路径；新程序见 `06-toys-tests.md` §3 |
 | `tests/neg/NegRealm.agda`、`NegWiden.agda` | 键与 realm 改成路径；仍必须失败 |
-| `tests/gen/LogTx.agda`、`tests/store/logtx.py` | 日志里的键 `"a/x"` 转成 Agda 时按 `/` 拆成列表 |
+| `tests/gen/LogTx.agda`、`tests/store/logtx.py` | 日志里的键 `"a/x"` 转成 Agda 时按 `/` 拆成列表；生成的文件自己实例化 `module S = Store Path String discretePath discreteString` |
 
 ## 7 验收
 
@@ -178,6 +187,8 @@ data Env where
 | E6 | 新反例被拒 | `./neg.sh` | 再三行：`NegTransport`（transport 的目标在 realm 外）、`NegNote`（NodeSig 的 set 写 code/，Note 没有这个构造子）、`NegPeek`（孩子的头想 import 父刚 check 的模块） |
 | E7 | ToyEnv 五条 refl 不变 | `./check.sh` | 包含在 E1 |
 | E8 | 日志转 Agda 仍 refl | `./store.sh` 的 F 组 | `F3 LogTx: ok`（键按 `/` 拆成路径后 `S.runTx` 仍按 refl 算） |
-| E9 | `_▸_` 只记接口后 ToyEnv、DriveToy、Node 都通过；`M2 i`、`hKid i₁ i₂` 这类依赖接口的类型照写 | `./check.sh` | 包含在 E1 |
+| E9 | `_▸_` 只记接口后 ToyEnv、DriveToy、Node 都通过；`M2 i`、`hKid i₁ i₂` 这类依赖接口名字的头在运行时用 mkHeader / mkCode 造，ToyEnv 五条 refl 的值不变 | `./check.sh` | 包含在 E1 |
+
+结果（2026-10-22，M0）：E1–E9 全过。E6 三个新反例失败的原因：NegTransport 是 realm 证明无解（Unsolved metas），NegNote 是 `Op` 对不上 `NodeOp`，NegPeek 是 `Unit` 对不上 `⊥`。
 
 搞乱了的典型症状：`check.sh` 在 `Env.agda` 报 `prefixOf` 未定义 → 某处还用着旧名字；在 `StoreToy.agda` 报 `String != List String` → 哪个键没改成路径。

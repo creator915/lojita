@@ -25,7 +25,7 @@
 | 档 | 东西 | 怎么用 |
 | --- | --- | --- |
 | 现行规格，照着做 | `CLAUDE.md`；`docs/harness/`（从 `README.md` 读到 `07-milestones.md`）；`docs/harness-plan.md`（方案，harness/ 是它的展开） | 开工前读；改任何文件前翻对应那一页 |
-| 现行代码与测试，已通过 | `src/`（骨架 Game / PathCat / Harness / Store / Replay、Later、Env、生成的 Syntax / FlagTable、Keys、玩具 ToyEnv / ToyStore / StoreToy / DriveToy）、`tests/`、`check.sh` `neg.sh` `drive.sh` `store.sh` `recheck.sh` `rebuild.sh` | 先跑基线再改；从 M0 起按 docs/harness 改 |
+| 现行代码与测试，已通过 | `src/`（骨架 Game / PathCat / Harness / Store / Replay、Later、Path、Env、生成的 Syntax / FlagTable、Keys、Node、玩具 ToyEnv / ToyStore / StoreToy / DriveToy / ToyNode）、`tests/`、`check.sh` `neg.sh` `drive.sh` `store.sh` `recheck.sh` `rebuild.sh` | 先跑基线再改；M0（Agda 侧）已于 2026-10-22 完成，结果在 `docs/harness/07-milestones.md`；下一步 M1 按 docs/harness 改 |
 | 记录与归档，只作历史 | `docs/walkthrough.md`、`category-frame.md`、`store-and-slots.md`：10-11、10-12 的设计稿，概念仍对，文件细节已变。`code-plan.md`、`code-design.md`：Code v6 的方案与实施记录，描述的就是现在的后端。`store-plan.md`：计划，阶段 1 已完成；`store-backend.md`：阶段 1 的记录，现行；`store-relations.md`：讨论稿，待拍板 1、5 已在 harness 里定。`bench.md`：ProgramBench 一局的记录，坑未修。`archive/`：丢弃的 Code v5 与第一版 Solve / Bench。`bench/`：ProgramBench 镜像脚本，搁置 | 查来龙去脉时看；与 docs/harness 冲突的以 harness 为准 |
 
 下面的"文件"表和"现在在哪"写于 10-14；之后的进展看 `docs/harness/07-milestones.md`。
@@ -46,8 +46,11 @@
 | `src/Later.agda` | 延迟模态 ▷：拍签名 `TSig`、带环境索引的程序 `Run`、路 `Walk`（程序与棋谱共用）、余模型、`play`（2026-10-13） |
 | `src/Syntax.agda` | **生成的**：Agda 的具体语法（parser 吐出来的那棵树），74 个类型 264 个构造子，由后端的 `agda-code-gen gen` 从 Agda 源码生成；范围去掉、名字是字符串、糖和 unsafe 都在 |
 | `src/FlagTable.agda` | **生成的**：哪些 flag 是 infective / coinfective（`agda-code-gen flags`） |
-| `src/Env.agda` | 环境 `Env`（父给的库与模式 ▸ 过了检查的模块）、头 `Header E`、`Code E`（归纳–递归，只管模块边界）、栈 `Ix`、签名 `AgdaSig`（parse / check / eval / render / enter（带 realm）/ leave / ask / get / set / log / sh / goals / give / split）、接口的导出表（名字、类型、依赖、哈希）、运行时造头造 Code 的判定（2026-10-13） |
-| `src/ToyEnv.agda` | 脚本余模型跑一局：check 两个模块、开一个窄的子实例、问一次、回来，全 `refl` |
+| `src/Path.agda` | 路径键（2026-10-22，M0）：`Path = List String`、`isPrefix`（用 `discreteString`，引理能证）、`prefix-++` / `prefix-refl`、`_≤ᵇ_` / `≤ᵇ-refl`、`half` / `half-≤`、`join`、`discretePath` |
+| `src/Env.agda` | 环境 `Env`（父给的库与模式 ▸ 过了检查的模块的接口）、头 `Header E`、`Code E`（只管模块边界）、栈 `Ix`（键与 realm 是路径）、签名 `AgdaSig`（parse / check / checkAt / eval / render / enter（带 realm）/ leave / ask（Query → 文件名表）/ get / set / transport / audit / log / sh / goals / give / split）、接口的导出表、运行时造头造 Code 的判定（2026-10-13，M0 改于 2026-10-22） |
+| `src/Node.agda` | 文件 agent 的程序（2026-10-22，M0）：`NodeSig`（agent 能用的步）与 `embed`、键与证明、答卷分类、沙箱 / 粘合帧、提示词 Query、主循环（解答 / 分解 / 孩子 / 改设计 / 反驳）；参数是 E₀ |
+| `src/ToyNode.agda` | `node` 在脚本余模型上的六局（单节点、重试、分解、孩子反驳后改设计、两孩子一个 keep、配额耗尽），全部 `refl` |
+| `src/ToyEnv.agda` | 脚本余模型（剧本 `Script`：check / ask / transport / audit 四张）跑一局：check 两个模块、开一个窄的子实例、问一次、回来，全 `refl`；ToyNode 的六局也用它 |
 | `src/DriveToy.agda` | 真后端跑的十二个程序（`./drive.sh`）：parse → check → eval、驳回带路径、子实例、接口、头里没写的 import、M2 import 虚拟模块 M1、`--safe` 兜底、注释节点、洞的表、填洞、分情况、λ { … } 里分情况 |
 | `src/Keys.agda` | 后端要实现的那个 Store：`discreteString`（由内建 injective 引理推出）、`S = Store String String` |
 | `src/StoreToy.agda` | Store 的十一个程序，纯对手上九条 `refl`；同一批程序 `./store.sh` 在真后端上跑 |
@@ -56,7 +59,7 @@
 | `archive/2026-10-13-bench/Str.agda` | 已归档。字符串零件：拼接、分行、围栏、修剪、掐中间（Solve 与 Bench 共用） |
 | `archive/2026-10-13-bench/Bench.agda` | 已归档。在 ProgramBench 的容器里当智能体（2026-10-13）：每步 ask → 取 ```bash 块 → `sh` 跑 → 结果记进历史；提示词 = mini-swe-agent 模板原文 + 全部历史；配额 = 步数上限 |
 | `bench/` | 把解释器叠进题目镜像的 Dockerfile 与脚本（build-image / dry / run / eval / relay）；说明见 `docs/bench.md` |
-| `tests/neg/` | 五个必须编译失败的反例（`./neg.sh`）：看不见的 import、多开 flag、关 `--safe`、根上 leave、配额超支 |
+| `tests/neg/` | 十个必须编译失败的反例（`./neg.sh`）：看不见的 import、多开 flag、关 `--safe`、根上 leave、配额超支、realm 外写键、realm 变宽、transport 目标在 realm 外、NodeSig 里裸 set 写 code、孩子偷看父刚 check 的模块 |
 | `docs/code-plan.md` | Code 类型的方案（2026-10-13）：完整的 concrete 语法从 Agda 源码生成、环境 = 语境 × 余语境、import / flag 是模态算子、余模型 = agda 程序的入口；接法 A / B |
 | `docs/bench.md` | 跑 ProgramBench：题目镜像 + 解释器那一层、一局的拓扑、`sh` 这一步、踩到的坑（2026-10-13） |
 | `docs/code-design.md` | 设计稿与实施记录（2026-10-13）：生成器、Env / Code E、AgdaSig、后端接在 agda 的哪几个入口、子实例、待拍板与已定 |
